@@ -9,7 +9,7 @@ You're the developer and should implement and run two APIs:
 
 ## Lab setup
 
--   Estimated time: **?? hour ?? minutes**
+-   Estimated time: **1 hour**
 
 ## Instructions
 
@@ -66,45 +66,42 @@ You're the developer and should implement and run two APIs:
 #### Task 2: Create Docker image 
 1. Add Dockerfile to the project: in context menu **Add -> Docker Support...** (choose **Target OS: Linux** in 'Docker File Options' dialog).
 1. Open **Dockerfile** and add the instructions below
-   ```EXPOSE 82```
-   ```ENV ASPNETCORE_URLS=http://*:82 ```
+   ```EXPOSE 81```
+   ```ENV ASPNETCORE_URLS=http://*:81 ```
    insted of
    ```EXPOSE 80``` (should be on line 5)
    
-   > **Note**: It allows to change default port 80 to custom 82
+   > **Note**: It allows to change default port 80 to custom 81
 1. Create a docker image
    - open CMD tool
    - run command ```cd {path where Dockerfile is located}```
-   - run command ```docker build -t notifier .``` to create an image
+   - run command ```docker build -t shopapi .``` to create an image
    - run command ```docker images``` to check the image was created
 
 #### Task 3: Run Docker image as a container
 
-1. Run command ```docker run --rm --name notifier -p 8082:82 -d notifier:latest``` to run Docker image as a container
-1. Run command ```docker container ps``` to check the container was run
-1. Check via Postman that the API is working (use URI http://localhost:8082/api/notify)
+1. Run command ```docker run --rm --name shopapi -p 8081:81 -d shopapi:latest``` to run Docker image as a container
+1. Run command ```docker container ps``` to check the container was run (you should see both containers **notifier** and **shopapi**)
+1. Check via Postman that the API is working (use URI http://localhost:8081/api/order)
+  As you can see the status of response is '500 Internal Server Error'.
+
+#### Task 4: Inspect logs and fix the issue
+
+1. In order to inspect logs, run command ```docker logs shopapi```
+   In logs you can see the error 'System.Net.Http.HttpRequestException: Cannot assign requested address' that means 'Notifier' address can't be assigned because **localhost** for **shopapi** container is not the same as **localhost** of your computer.
+1. To fix this issue, you can put these containers to one network
+   - run commands ```docker container stop shopapi``` and ```docker container stop notifier``` to stop both containers
+   - run command ```docker network create shop-net``` to create a new network named **shop-net**
+   - run command ```docker run --rm --name notifier -p 8082:82 --network shop-net -d notifier:latest``` to create **notifier** container with **shop-net** network
+   - run command ```docker run --rm --name shopapi -p 8081:81 --network shop-net -e "NotifierUrl=http://notifier:82/api/notify" -d shopapi:latest``` to create **shopapi** container with **shop-net** network and new **NotifierUrl** configuration parameter
+1. Check via Postman that the API is working now (use URI http://localhost:8081/api/order)
 
 ### Exercise 7: Clean up
 
-#### Task 1: Open Azure Cloud Shell
-
-1.  In the Azure portal, select the **Cloud Shell** icon to open a new shell instance.
-
-1.  If Cloud Shell isn't already configured, configure the shell for Bash by using the default settings.
-
-#### Task 2: Delete resource groups
-
-1.  Enter the following command, and then select Enter to delete the **ManagedPlatform** resource group:
-
-    ```
-    az group delete --name ManagedPlatform --no-wait --yes
-    ```
-
-1.  Close the Cloud Shell pane in the portal.
-
-#### Task 3: Close the active applications
-
-
-#### Review
-
-In this exercise, you cleaned up your subscription by removing the resource groups used in this lab.
+   Run the next commands to delete all created containers and images
+   - ```docker container stop shopapi```
+   - ```docker container stop notifier```
+   - ```docker image rm shopapi```
+   - ```docker image rm notifier```
+   - ```docker image prune -f```
+   - ```docker network rm shop-net```
