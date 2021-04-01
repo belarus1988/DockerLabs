@@ -114,7 +114,7 @@ To debug the app, do next steps:
 1. Check via Postman that the API is working now
 
 #### Task 3: Inspect logs
-Additional way to find the issue is to inspect logs. In order to inspect logs, run command '**docker logs shopapi**'. In logs you can see the same error 'System.Exception: Test exception'.
+Additional way to find the issue is to inspect logs. In order to inspect logs, run command ```docker logs notifier```. In logs you can see the same error 'System.Exception: Test exception'.
 
 ### Exercise 3: Create Dockerfile using Visual Studio
 Alternative way to create Dockerfile is to use the next VS feature. 
