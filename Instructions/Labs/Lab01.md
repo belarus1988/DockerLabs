@@ -7,7 +7,7 @@ You're a developer and should implement Notifier API which sends the notificatio
 
 ## Lab setup
 
--   Estimated time: **?? hour ?? minutes**
+-   Estimated time: **1 hour**
 
 ## Instructions
 
