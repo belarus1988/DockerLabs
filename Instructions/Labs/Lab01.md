@@ -1,15 +1,13 @@
-# Lab: Building the webApi applications and run them as the Docker containers locally
+# Lab: Building the webApi application and run it as the Docker container locally
 # Student lab manual
 
 ## Lab scenario
 
-You're a developer and should implement and run two APIs:
-- Notifier which sends the notifications to the customers
-- ShopApi which processes the orders and uses Notifier API
+You're a developer and should implement Notifier API which sends the notifications to the customers and run it as a docker container.
 
 ## Lab setup
 
--   Estimated time: **1 hour 15 minutes**
+-   Estimated time: **?? hour ?? minutes**
 
 ## Instructions
 
@@ -23,22 +21,67 @@ You're a developer and should implement and run two APIs:
 -   Visual Studio
 
     
-### Exercise 1: Build Notifier back-end API
+### Exercise 1: Create an image of Notifier API
 
-#### Task 1: 
-
+#### Task 1: Create Dockerfile 
 1. Open the **Notifier** project in VS (~\Allfiles\Labs\01\Notifier) and run it.
-1. Test API via Postman (create POST request with URI http://localhost:55592/api/notify)
+2. Create a ```.dockerignore``` file in your project folder and exclude files that shouldn't be copied into the container:
+```
+Dockerfile
+[b|B]in
+[O|o]bj
+```
+3. Create a ```Dockerfile``` in your project:
+- **Specify image.** For content, the first thing we need to define is an image we want to base it on. We also need to set a working directory where we want the files to end up on the container. We do that with the command FROM and WORKDIR, like so:
+```
+FROM mcr.microsoft.com/dotnet/core/sdk:3.1 AS build
+WORKDIR /src
+```
+- **Copy project file.** Next, we need to copy the project file ending in ```.csproj```. Additionally, we also need to call ```dotnet restore```, to ensure we install all specified dependencies:
+```
+COPY ["Notifier.csproj", ""]
+RUN dotnet restore "./Notifier.csproj"
+```
+- **Copy and Build.** Next, we need to copy our app files and build our app:
+```
+COPY . .
+WORKDIR "/src/."
+RUN dotnet build "Notifier.csproj" -c Debug -o /app/build
+RUN dotnet publish "Notifier.csproj" -c Debug -o /app/publish
+```
+- **Build runtime image.** Here we again specify our image and our working directory:
+```
+FROM mcr.microsoft.com/dotnet/core/aspnet:3.1
+WORKDIR /app
+```
+There is a difference though, this time we want to copy our built files to ```/app/publish```:
+```
+COPY --from=build /app/publish .
+```
+- **Starting the app.** Finally, we add a command for how to start up our app. We do that with the command ENTRYPOINT. ENTRYPOINT takes an array that transforms into a command-line invocation with arguments:
+```
+ENTRYPOINT ["dotnet", "Notifier.dll"]
+```
 
-#### Task 2: Create Docker image 
-1. Add Dockerfile to the project: in context menu **Add -> Docker Support...** (choose **Target OS: Linux** in 'Docker File Options' dialog).
-1. Open **Dockerfile** and add the instructions below
-   ```EXPOSE 82```
-   ```ENV ASPNETCORE_URLS=http://*:82 ```
-   instead of
-   ```EXPOSE 80``` (should be on line 5)
-   
-   > **Note**: It allows to change default port 80 to custom 82
+ The ```Dockerfile``` in its entirety looks like this:
+ ```
+FROM mcr.microsoft.com/dotnet/core/sdk:3.1 AS build
+WORKDIR /src
+COPY ["Notifier.csproj", ""]
+RUN dotnet restore "./Notifier.csproj"
+COPY . .
+WORKDIR "/src/."
+RUN dotnet build "Notifier.csproj" -c Debug -o /app/build
+RUN dotnet publish "Notifier.csproj" -c Debug -o /app/publish
+
+FROM mcr.microsoft.com/dotnet/core/aspnet:3.1
+WORKDIR /app
+COPY --from=build /app/publish .
+ENTRYPOINT ["dotnet", "Notifier.dll"]
+ ```
+
+#### Task 2: Create Docker image
+
 1. Start Docker Desktop application. Make sure the app is running in 'Linux containers' mode.
 1. Create a docker image
    - open CMD tool
@@ -46,75 +89,41 @@ You're a developer and should implement and run two APIs:
    - run command ```docker build -t notifier .``` to create an image (it can take a few minutes)
    - run command ```docker images``` to check the image was created
 
-#### Task 3: Run Docker image as a container
+### Exercise 2: Run Notifier API as a container
 
-1. Run command ```docker run --rm --name notifier -p 8082:82 -d notifier:latest``` to run Docker image as a container
+#### Task 1: Run Docker image as a container
+
+1. Run command ```docker run --rm --name notifier -p 8080:80 -d notifier:latest``` to run Docker image as a container
 1. Run command ```docker container ps``` to check the container was run
-1. Check via Postman that the API is working (use URI http://localhost:8082/api/notify)
-
-
-### Exercise 2: Build ShopApi back-end API
-
-#### Prerequisites:
--  Notifier API should be running as a Docker container (see previous exercise)
-
-#### Task 1: 
-
-1. Open the **ShopApi** project in VS (~\Allfiles\Labs\01\ShopApi)
-1. Inspect the file **OrderController.cs**. There you can see that **Notifier** API is used into **Create** method through **HttpClient** (**appsettings.json** file contains URI for Notifier API).
-1. Run the project and test it via Postman (create POST request with URI http://localhost:56085/api/order)
-
-#### Task 2: Create Docker image 
-1. Add Dockerfile to the project: in context menu **Add -> Docker Support...** (choose **Target OS: Linux** in 'Docker File Options' dialog).
-1. Open **Dockerfile** and add the instructions below
-   ```EXPOSE 81```
-   ```ENV ASPNETCORE_URLS=http://*:81 ```
-   instead of
-   ```EXPOSE 80``` (should be on line 5)
+1. Check via Postman that the API is working (use URI http://localhost:8080/api/notify)
+As you can see the response has a status code **500 (Internal Server Error)**.
    
-   > **Note**: It allows to change default port 80 to custom 81
-
-   In addition, **replace 'Release' mode with 'Debug'** in the lines with 'RUN dotnet build ...' and 'RUN dotnet publish ...' commands. It allows to debug the API later.
-1. Create a docker image
-   - open CMD tool
-   - run command ```cd {path where Dockerfile is located}```
-    > **Important:** Change a path to ShopApi project
-   - run command ```docker build -t shopapi .``` to create an image
-   - run command ```docker images``` to check the image was created
-
-#### Task 3: Run Docker image as a container
-
-1. Run command ```docker run --rm --name shopapi -p 8081:81 -d shopapi:latest``` to run Docker image as a container
-1. Run command ```docker container ps``` to check the container was run (you should see both containers **notifier** and **shopapi**)
-1. Check via Postman that the API is working (use URI http://localhost:8081/api/order)
-  As you can see the response is 'Cannot assign requested address' with 400 status code.
-
-#### Task 4: Fix the issue
+#### Task 2: Fix the issue
 To debug the app, do next steps:
-1. Go to VS, open **OrderController.cs** file and insert breakpoint inside **Create** method.
+1. Go to VS, open **NotifyController.cs** file and insert breakpoint inside **Send** method.
 1. Open **Debug -> Attach to Process...**
 1. Choose 
    - Connection type: **Docker (Linux Container)**
-   - Connection target: **shopapi**
+   - Connection target: **notifier**
    - Attach to: **Managed (.NET Core for Unix) code**
    - Process: **dotnet**
 1. Press **Attach**
-1. Make a request via Postman (see Task 3, step 3)
-1. Using Debugger you can see the error 'System.Net.Http.HttpRequestException: Cannot assign requested address' was caught. It means 'Notifier' address can't be assigned because **localhost** for **shopapi** container is not the same as **localhost** of your computer.
-1. To fix this issue, you can put these containers to one network
-   - run commands ```docker container stop shopapi``` and ```docker container stop notifier``` to stop both containers
-   - run command ```docker network create shop-net``` to create a new network named **shop-net**
-   - run command ```docker run --rm --name notifier -p 8082:82 --network shop-net -d notifier:latest``` to create **notifier** container with **shop-net** network
-   - run command ```docker run --rm --name shopapi -p 8081:81 --network shop-net -e "NotifierUrl=http://notifier:82/api/notify" -d shopapi:latest``` to create **shopapi** container with **shop-net** network and new **NotifierUrl** configuration parameter
-3. Check via Postman that the API is working now (use URI http://localhost:8081/api/order)
+1. Make a request via Postman (see Task 1, step 3)
+1. Using Debugger you can catch and fix the error (just remove custom error)
+1. Rebuild an image and re-run a container (before run command ```docker container stop notifier``` to stop the container)
+1. Check via Postman that the API is working now
 
-> **Note:** Additional way to find the issue is to inspect logs. In order to inspect logs, run command '**docker logs shopapi**'. In logs you can see the same error 'System.Net.Http.HttpRequestException: Cannot assign requested address'.
-### Exercise 7: Clean up
+#### Task 3: Inspect logs
+Additional way to find the issue is to inspect logs. In order to inspect logs, run command '**docker logs shopapi**'. In logs you can see the same error 'System.Exception: Test exception'.
 
-   Run the next commands to delete all created containers and images
-   - ```docker container stop shopapi```
+### Exercise 3: Create Dockerfile using Visual Studio
+Alternative way to create Dockerfile is to use the next VS feature. 
+In context menu click **Add -> Docker Support...** and choose **Target OS: Linux** in 'Docker File Options' dialog.
+After file is created, compare content of both files (new one and you created before).
+
+### Exercise 4: Clean up
+
+   Run the next commands to delete created container and images
    - ```docker container stop notifier```
-   - ```docker image rm shopapi```
    - ```docker image rm notifier```
    - ```docker image prune -f```
-   - ```docker network rm shop-net```

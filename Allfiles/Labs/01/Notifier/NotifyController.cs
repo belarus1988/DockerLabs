@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Notifier
@@ -11,6 +12,7 @@ namespace Notifier
         public async Task<ActionResult> Send([FromBody] OrderDto order)
         {
             // some logic...
+            throw new Exception("Test exception");
 
             return new OkObjectResult($"Customer is notified. Order Id: {order.Id}");
         }
